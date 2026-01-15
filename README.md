@@ -4,6 +4,8 @@ Convert YouTube videos into clean, readable transcripts with AI-generated chapte
 
 Tired of talks and podcasts being video-only? This tool takes any YouTube link and converts it to a grammatical transcript with chapters and top takeaways.
 
+![Screenshot](screenshot.png)
+
 ## Features
 
 - Extracts transcripts from YouTube videos
