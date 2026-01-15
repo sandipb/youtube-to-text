@@ -167,6 +167,7 @@
 
             resultTitle.textContent = result.title;
             markdownViewer.innerHTML = marked.parse(result.markdown);
+            document.title = result.title;
 
             submitBtn.disabled = false;
             submitBtn.textContent = 'Textify';

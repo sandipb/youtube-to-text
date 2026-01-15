@@ -120,11 +120,11 @@ def generate_takeaways(transcript: str, video_title: str, api_key: str) -> str:
     prompt = f"""Read this transcript for "{video_title}" and extract the top 5 takeaways.
 
 Each takeaway should be:
-- One sentence
-- Include a direct quote from the transcript (use quotation marks)
-- Capture a key insight, announcement, or important point
+- One sentence, maximum 20 words
+- Written in plain language for a layperson (no jargon)
+- A key insight, announcement, or important point from the video
 
-Format as a bullet list with exactly 5 items.
+Return ONLY a bullet list with exactly 5 items. Do not include any intro text like "Here are the takeaways" - just the bullet points.
 
 TRANSCRIPT:
 {transcript}"""
