@@ -44,19 +44,6 @@ header p {
     display: none;
 }
 
-/* Menu bar */
-.input-group::before {
-    content: "File   Edit   View   Insert   Format   Tools   Help";
-    display: block;
-    width: 100%;
-    padding: 4px 8px;
-    background: #e8e8e8;
-    border-bottom: 1px solid #aaa;
-    color: #000;
-    font-size: 11px;
-    letter-spacing: 0.3px;
-    margin-bottom: 4px;
-}
 
 /* Toolbar area */
 .input-group {
