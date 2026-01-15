@@ -144,9 +144,14 @@ def clean_transcript_with_gemini(transcript: str, video_title: str, api_key: str
 
 Combine paragraphs from the same speaker, fix capitalization and punctuation, remove filler words like unnecessary "like"s "you know"s and "um"s, and remove repeated words. If there are names, use context clues to figure out who it is. Make sure all sentences are grammatical, but do not add new phrases/clauses/ideas of your own.
 
-Split the transcript into natural paragraphs, where each paragraph is maximum 200 words. For podcasts with multiple speakers, there should always be a line break between each speaker's section and the next (even if this results in short paragraphs).
+Split the transcript into natural paragraphs, where each paragraph is maximum 200 words.
 
-After cleaning the transcript, add chapters to split up sections/themes. Give each chapter a bolded title and insert them into the transcript as subheaders (use ### markdown formatting). The title should be a single short sentence expressing the key takeaway of that chapter.
+For videos with multiple speakers:
+- Include the bolded speaker's name and a colon before their section
+- There should always be a line break between each speaker's section and the next (even if this results in short paragraphs)
+- Never insert a chapter heading in the middle of a single speaker's section - only between speakers
+
+After cleaning the transcript, add chapters to split up sections/themes. Give each chapter a bolded title and insert them into the transcript as subheaders (use ### markdown formatting). The title should be a single short sentence expressing the key takeaway of that chapter. Every chapter must contain at least 2 paragraphs.
 
 Otherwise, modify the original substance the minimum amount. Make sure the transcript is complete and not missing chunks. Be very meticulous.
 

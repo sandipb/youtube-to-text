@@ -91,6 +91,14 @@
 
         let currentJobId = null;
 
+        // Check for URL parameter and auto-submit
+        const params = new URLSearchParams(window.location.search);
+        const autoUrl = params.get('url');
+        if (autoUrl) {
+            urlInput.value = autoUrl;
+            setTimeout(() => form.dispatchEvent(new Event('submit')), 100);
+        }
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
