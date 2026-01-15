@@ -4,9 +4,11 @@ Podcast Cleaner Web App
 Flask web interface for transcribing and cleaning YouTube videos.
 """
 
+import json
 import os
 import threading
 import uuid
+from pathlib import Path
 from flask import Flask, render_template, request, jsonify, Response
 
 from clean_podcast import process_video, extract_video_id
@@ -16,8 +18,26 @@ app = Flask(__name__)
 # Store jobs in memory (for simplicity)
 jobs = {}
 
+# Persistent cache file
+CACHE_FILE = Path(__file__).parent / "transcript_cache.json"
+
+def load_cache():
+    """Load transcript cache from disk."""
+    if CACHE_FILE.exists():
+        try:
+            with open(CACHE_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_cache(cache):
+    """Save transcript cache to disk."""
+    with open(CACHE_FILE, "w") as f:
+        json.dump(cache, f)
+
 # Cache completed transcripts by video ID
-transcript_cache = {}
+transcript_cache = load_cache()
 
 
 @app.route("/")
@@ -75,8 +95,9 @@ def transcribe():
             result = process_video(url, api_key, progress_callback)
             jobs[job_id]["status"] = "completed"
             jobs[job_id]["result"] = result
-            # Cache the result
+            # Cache the result and save to disk
             transcript_cache[video_id] = result
+            save_cache(transcript_cache)
         except Exception as e:
             jobs[job_id]["status"] = "error"
             jobs[job_id]["error"] = str(e)
