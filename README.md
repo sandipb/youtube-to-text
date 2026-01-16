@@ -40,7 +40,7 @@ Tired of talks and podcasts being video-only? This tool takes any YouTube link a
 
 3. **Install dependencies**
    ```bash
-   pip install -r requirements.txt
+   uv pip install -e .
    ```
 
 4. **Get a Google AI API key**
@@ -55,6 +55,11 @@ Tired of talks and podcasts being video-only? This tool takes any YouTube link a
 6. **Run the app**
    ```bash
    python app.py
+   ```
+   
+   Or with auto-reload for development:
+   ```bash
+   uvicorn app:app --host 0.0.0.0 --port 8080 --reload
    ```
 
 7. **Open in browser**
@@ -76,7 +81,7 @@ Tired of talks and podcasts being video-only? This tool takes any YouTube link a
 
 ## Tech Stack
 
-- Flask (Python web framework)
+- FastAPI (Python web framework)
 - yt-dlp (YouTube transcript extraction)
 - Google Gemini AI (transcript cleaning)
 - WeasyPrint (PDF generation)

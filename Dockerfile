@@ -1,30 +1,28 @@
-FROM python:3.12-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app
 
-# Install deno (yt-dlp's preferred JS runtime), ffmpeg, and yt-dlp
+# Install deno (yt-dlp's preferred JS runtime) and ffmpeg
 RUN apt-get update && apt-get install -y \
     curl \
     unzip \
     ffmpeg \
     && curl -fsSL https://deno.land/install.sh | sh \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip install --no-cache-dir yt-dlp
+    && rm -rf /var/lib/apt/lists/*
 
 ENV DENO_INSTALL="/root/.deno"
 ENV PATH="$DENO_INSTALL/bin:$PATH"
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
-COPY app.py clean_podcast.py ./
+# Copy application files and install dependencies
+COPY pyproject.toml app.py clean_podcast.py ./
 COPY templates/ templates/
 COPY static/ static/
+
+# Install Python dependencies from pyproject.toml using uv
+RUN uv pip install --system --no-cache .
 
 # Expose port
 EXPOSE 8080
 
-# Run with gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
+# Run with uvicorn
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]

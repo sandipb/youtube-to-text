@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "youtube-to-text"
+version = "1.0.0"
+description = "Convert YouTube videos into clean, readable transcripts with AI-generated chapters and takeaways"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Jasmine Sun", email = "jasmine@jasmi.news"},
+]
+keywords = ["youtube", "transcript", "ai", "fastapi"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "fastapi>=0.108.0",
+    "uvicorn[standard]>=0.25.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.6",
+    "google-genai>=1.0.0",
+    "youtube-transcript-api>=0.6.0",
+    "yt-dlp>=2024.0.0",
+    "weasyprint>=60.0",
+    "markdown>=3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/jaswsunny/youtube-to-text"
+Repository = "https://github.com/jaswsunny/youtube-to-text"
+Issues = "https://github.com/jaswsunny/youtube-to-text/issues"
+
+[project.scripts]
+clean-podcast = "clean_podcast:main"
+
+[tool.setuptools]
+py-modules = ["app", "clean_podcast"]

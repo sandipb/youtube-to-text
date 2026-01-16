@@ -1,27 +1,44 @@
 #!/usr/bin/env python3
 """
 Podcast Cleaner Web App
-Flask web interface for transcribing and cleaning YouTube videos.
+FastAPI web interface for transcribing and cleaning YouTube videos.
 """
 
 import json
 import os
-import threading
 import uuid
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, Response
+from typing import Dict, Any
+from urllib.parse import quote
+
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
+from fastapi.responses import Response, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 from clean_podcast import process_video, extract_video_id
 
-app = Flask(__name__)
+app = FastAPI(
+    title="I Hate Video",
+    description="Convert YouTube videos into clean, readable transcripts with AI-generated chapters and takeaways",
+    version="1.0.0",
+)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Setup templates
+templates = Jinja2Templates(directory="templates")
 
 # Store jobs in memory (for simplicity)
-jobs = {}
+jobs: Dict[str, Dict[str, Any]] = {}
 
 # Persistent cache file
 CACHE_FILE = Path(__file__).parent / "transcript_cache.json"
 
-def load_cache():
+
+def load_cache() -> Dict[str, Any]:
     """Load transcript cache from disk."""
     if CACHE_FILE.exists():
         try:
@@ -31,35 +48,51 @@ def load_cache():
             return {}
     return {}
 
-def save_cache(cache):
+
+def save_cache(cache: Dict[str, Any]) -> None:
     """Save transcript cache to disk."""
     with open(CACHE_FILE, "w") as f:
         json.dump(cache, f)
+
 
 # Cache completed transcripts by video ID
 transcript_cache = load_cache()
 
 
-@app.route("/")
-def index():
+class TranscribeRequest(BaseModel):
+    url: str
+
+
+class TranscribeResponse(BaseModel):
+    job_id: str
+
+
+class StatusResponse(BaseModel):
+    status: str
+    progress: str
+    result: Dict[str, str] | None = None
+    error: str | None = None
+
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
     """Serve the main page."""
-    return render_template("index.html")
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
-@app.route("/transcribe", methods=["POST"])
-def transcribe():
+@app.post("/transcribe", response_model=TranscribeResponse)
+async def transcribe(request: TranscribeRequest, background_tasks: BackgroundTasks):
     """Start a transcription job."""
-    data = request.get_json()
-    url = data.get("url", "").strip()
+    url = request.url.strip()
 
     if not url:
-        return jsonify({"error": "URL is required"}), 400
+        raise HTTPException(status_code=400, detail="URL is required")
 
     # Extract video ID and check cache
     try:
         video_id = extract_video_id(url)
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        raise HTTPException(status_code=400, detail=str(e))
 
     # If we have a cached result, return it immediately
     if video_id in transcript_cache:
@@ -70,12 +103,12 @@ def transcribe():
             "result": transcript_cache[video_id],
             "error": None,
         }
-        return jsonify({"job_id": job_id})
+        return TranscribeResponse(job_id=job_id)
 
     # Get API key from environment
     api_key = os.environ.get("GOOGLE_API_KEY")
     if not api_key:
-        return jsonify({"error": "GOOGLE_API_KEY not configured"}), 500
+        raise HTTPException(status_code=500, detail="GOOGLE_API_KEY not configured")
 
     # Create job
     job_id = str(uuid.uuid4())
@@ -86,9 +119,10 @@ def transcribe():
         "error": None,
     }
 
-    # Run in background thread
+    # Run in background task
     def run_job():
         try:
+
             def progress_callback(message):
                 jobs[job_id]["progress"] = message
 
@@ -102,18 +136,17 @@ def transcribe():
             jobs[job_id]["status"] = "error"
             jobs[job_id]["error"] = str(e)
 
-    thread = threading.Thread(target=run_job)
-    thread.start()
+    background_tasks.add_task(run_job)
 
-    return jsonify({"job_id": job_id})
+    return TranscribeResponse(job_id=job_id)
 
 
-@app.route("/status/<job_id>")
-def status(job_id):
+@app.get("/status/{job_id}")
+async def status(job_id: str):
     """Check job status."""
     job = jobs.get(job_id)
     if not job:
-        return jsonify({"error": "Job not found"}), 404
+        raise HTTPException(status_code=404, detail="Job not found")
 
     response = {
         "status": job["status"],
@@ -129,20 +162,18 @@ def status(job_id):
     elif job["status"] == "error":
         response["error"] = job["error"]
 
-    return jsonify(response)
+    return response
 
 
-@app.route("/download/<job_id>")
-def download(job_id):
+@app.get("/download/{job_id}")
+async def download(job_id: str):
     """Download the transcript as a markdown file."""
-    from urllib.parse import quote
-
     job = jobs.get(job_id)
     if not job:
-        return jsonify({"error": "Job not found"}), 404
+        raise HTTPException(status_code=404, detail="Job not found")
 
     if job["status"] != "completed":
-        return jsonify({"error": "Job not completed"}), 400
+        raise HTTPException(status_code=400, detail="Job not completed")
 
     result = job["result"]
     # Use ASCII-safe filename and UTF-8 encoded filename for broader compatibility
@@ -151,44 +182,50 @@ def download(job_id):
         safe_filename = "transcript.md"
 
     # URL-encode the filename for the filename* parameter (RFC 5987)
-    encoded_filename = quote(result["filename"], safe='')
+    encoded_filename = quote(result["filename"], safe="")
 
     return Response(
-        result["markdown"],
-        mimetype="text/markdown",
+        content=result["markdown"],
+        media_type="text/markdown",
         headers={
             "Content-Disposition": f"attachment; filename=\"{safe_filename}\"; filename*=UTF-8''{encoded_filename}"
         },
     )
 
 
-@app.route("/download/<job_id>/pdf")
-def download_pdf(job_id):
+@app.get("/download/{job_id}/pdf")
+async def download_pdf(job_id: str, font: str = "Times New Roman"):
     """Download the transcript as a PDF file."""
-    from urllib.parse import quote
     from weasyprint import HTML, CSS
     import markdown
     import io
 
     job = jobs.get(job_id)
     if not job:
-        return jsonify({"error": "Job not found"}), 404
+        raise HTTPException(status_code=404, detail="Job not found")
 
     if job["status"] != "completed":
-        return jsonify({"error": "Job not completed"}), 400
+        raise HTTPException(status_code=400, detail="Job not completed")
 
     result = job["result"]
 
-    # Get font from query parameter, default to Times New Roman
-    font = request.args.get("font", "Times New Roman")
     # Sanitize font name to prevent CSS injection
-    allowed_fonts = ["Arial", "Calibri", "Comic Sans MS", "Garamond", "Georgia", "Tahoma", "Times New Roman", "Wingdings"]
+    allowed_fonts = [
+        "Arial",
+        "Calibri",
+        "Comic Sans MS",
+        "Garamond",
+        "Georgia",
+        "Tahoma",
+        "Times New Roman",
+        "Wingdings",
+    ]
     if font not in allowed_fonts:
         font = "Times New Roman"
 
     # Convert markdown to HTML
     md_content = result["markdown"]
-    html_content = markdown.markdown(md_content, extensions=['tables', 'fenced_code'])
+    html_content = markdown.markdown(md_content, extensions=["tables", "fenced_code"])
 
     # Wrap in full HTML document with styling
     full_html = f"""<!DOCTYPE html>
@@ -203,7 +240,8 @@ def download_pdf(job_id):
 </html>"""
 
     # PDF styling with selected font
-    css = CSS(string=f"""
+    css = CSS(
+        string=f"""
         @page {{
             margin: 1in;
             size: letter;
@@ -237,7 +275,8 @@ def download_pdf(job_id):
         li {{
             margin-bottom: 0.3em;
         }}
-    """)
+    """
+    )
 
     # Generate PDF
     pdf_buffer = io.BytesIO()
@@ -249,11 +288,11 @@ def download_pdf(job_id):
     safe_filename = pdf_filename.encode("ascii", "ignore").decode()
     if not safe_filename:
         safe_filename = "transcript.pdf"
-    encoded_filename = quote(pdf_filename, safe='')
+    encoded_filename = quote(pdf_filename, safe="")
 
     return Response(
-        pdf_buffer.read(),
-        mimetype="application/pdf",
+        content=pdf_buffer.read(),
+        media_type="application/pdf",
         headers={
             "Content-Disposition": f"attachment; filename=\"{safe_filename}\"; filename*=UTF-8''{encoded_filename}"
         },
@@ -273,4 +312,7 @@ if __name__ == "__main__":
 
     print("Starting Podcast Cleaner Web App...")
     print("Open http://127.0.0.1:8080 in your browser")
-    app.run(debug=True, host="0.0.0.0", port=8080)
+
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8080)
