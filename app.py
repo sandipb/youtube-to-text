@@ -179,6 +179,13 @@ def download_pdf(job_id):
 
     result = job["result"]
 
+    # Get font from query parameter, default to Times New Roman
+    font = request.args.get("font", "Times New Roman")
+    # Sanitize font name to prevent CSS injection
+    allowed_fonts = ["Times New Roman", "Tahoma", "Comic Sans MS", "Arial", "Wingdings"]
+    if font not in allowed_fonts:
+        font = "Times New Roman"
+
     # Convert markdown to HTML
     md_content = result["markdown"]
     html_content = markdown.markdown(md_content, extensions=['tables', 'fenced_code'])
@@ -195,23 +202,25 @@ def download_pdf(job_id):
 </body>
 </html>"""
 
-    # PDF styling
-    css = CSS(string="""
+    # PDF styling with selected font
+    css = CSS(string=f"""
         @page {{
             margin: 1in;
             size: letter;
         }}
         body {{
-            font-family: "Times New Roman", Times, serif;
+            font-family: "{font}", sans-serif;
             font-size: 12pt;
             line-height: 1.5;
             color: #333;
         }}
         h1 {{
+            font-family: "{font}", sans-serif;
             font-size: 18pt;
             margin-bottom: 0.5em;
         }}
         h2 {{
+            font-family: "{font}", sans-serif;
             font-size: 14pt;
             margin-top: 1em;
             margin-bottom: 0.5em;

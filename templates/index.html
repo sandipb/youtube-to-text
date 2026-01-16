@@ -47,15 +47,19 @@
                 </div>
             </div>
             <div class="viewer-toolbar">
-                <label>Font:
-                    <select id="font-select">
-                        <option value="Times New Roman" selected>Times New Roman</option>
-                        <option value="Tahoma">Tahoma</option>
-                        <option value="Comic Sans MS">Comic Sans</option>
-                        <option value="Arial">Arial</option>
-                        <option value="Wingdings">Wingdings</option>
-                    </select>
-                </label>
+                <div class="font-dropdown">
+                    <div class="font-combo" id="font-combo">
+                        <span class="font-value" id="font-value">Times New Roman</span>
+                        <span class="font-arrow"></span>
+                    </div>
+                    <div class="font-menu" id="font-menu">
+                        <button class="font-option selected" data-font="Times New Roman" style="font-family: 'Times New Roman', serif;">Times New Roman</button>
+                        <button class="font-option" data-font="Tahoma" style="font-family: Tahoma, sans-serif;">Tahoma</button>
+                        <button class="font-option" data-font="Comic Sans MS" style="font-family: 'Comic Sans MS', cursive;">Comic Sans</button>
+                        <button class="font-option" data-font="Arial" style="font-family: Arial, sans-serif;">Arial</button>
+                        <button class="font-option" data-font="Wingdings" style="font-family: Wingdings;">Wingdings</button>
+                    </div>
+                </div>
                 <div class="zoom-controls">
                     <button id="zoom-out" class="zoom-btn">−</button>
                     <span id="zoom-level">100%</span>
@@ -198,14 +202,37 @@
             submitBtn.textContent = 'Textify';
         }
 
-        // Font switcher
-        const fontSelect = document.getElementById('font-select');
-        fontSelect.addEventListener('change', () => {
-            const font = fontSelect.value;
-            markdownViewer.style.fontFamily = font + ', serif';
-            // Also update headers
-            markdownViewer.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(h => {
-                h.style.fontFamily = font + ', serif';
+        // Font dropdown
+        const fontCombo = document.getElementById('font-combo');
+        const fontValue = document.getElementById('font-value');
+        const fontMenu = document.getElementById('font-menu');
+        let currentFont = 'Times New Roman';
+
+        fontCombo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fontMenu.classList.toggle('show');
+            saveMenu.classList.remove('show');
+        });
+
+        fontMenu.querySelectorAll('.font-option').forEach(option => {
+            option.addEventListener('click', () => {
+                const font = option.dataset.font;
+                currentFont = font;
+
+                // Update displayed text
+                fontValue.textContent = option.textContent;
+
+                // Update selected state
+                fontMenu.querySelectorAll('.font-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+
+                // Apply font to viewer
+                markdownViewer.style.fontFamily = font + ', serif';
+                markdownViewer.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(h => {
+                    h.style.fontFamily = font + ', serif';
+                });
+
+                fontMenu.classList.remove('show');
             });
         });
 
@@ -243,10 +270,12 @@
         saveBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             saveMenu.classList.toggle('show');
+            fontMenu.classList.remove('show');
         });
 
         document.addEventListener('click', () => {
             saveMenu.classList.remove('show');
+            fontMenu.classList.remove('show');
         });
 
         async function downloadFile(url, defaultFilename) {
@@ -282,7 +311,8 @@
                 try {
                     saveBtn.disabled = true;
                     saveBtn.textContent = 'Generating...';
-                    await downloadFile(`/download/${currentJobId}/pdf`, 'transcript.pdf');
+                    const font = encodeURIComponent(currentFont);
+                    await downloadFile(`/download/${currentJobId}/pdf?font=${font}`, 'transcript.pdf');
                 } catch (error) {
                     alert('PDF download failed: ' + error.message);
                 } finally {

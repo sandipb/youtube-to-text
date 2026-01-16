@@ -200,7 +200,8 @@ form::before {
     border-color: #5a9a5a;
 }
 
-.save-dropdown {
+.save-dropdown,
+.font-dropdown {
     position: relative;
 }
 
@@ -246,7 +247,83 @@ form::before {
     border-radius: 0 0 2px 2px;
 }
 
-.download-btn:disabled {
+.font-combo {
+    display: flex;
+    cursor: pointer;
+    border: 1px solid #7f9db9;
+}
+
+.font-value {
+    padding: 2px 6px;
+    font-size: 11px;
+    font-family: Tahoma, sans-serif;
+    background: #fff;
+    min-width: 110px;
+    border-right: 1px solid #7f9db9;
+}
+
+.font-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    background: linear-gradient(to bottom, #c7d8ed 0%, #a8c4e2 45%, #89acd4 50%, #99b9de 100%);
+}
+
+.font-arrow::after {
+    content: '';
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #1c3a5e;
+}
+
+.font-combo:hover .font-arrow {
+    background: linear-gradient(to bottom, #d4e4f7 0%, #b8d0eb 45%, #9fc0e2 50%, #aecae8 100%);
+}
+
+.font-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 1px;
+    background: #fff;
+    border: 1px solid #7f9db9;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    z-index: 100;
+    min-width: 180px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.font-menu.show {
+    display: block;
+}
+
+.font-option {
+    display: block;
+    width: 100%;
+    padding: 3px 8px;
+    font-size: 12px;
+    text-align: left;
+    background: #fff;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.font-option:hover {
+    background: #316ac5;
+    color: #fff;
+}
+
+.font-option.selected {
+    background: #316ac5;
+    color: #fff;
+}
+
+.download-btn:disabled,
+.toolbar-btn:disabled {
     opacity: 0.6;
     cursor: wait;
 }
