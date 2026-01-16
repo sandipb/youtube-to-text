@@ -38,7 +38,13 @@
         <div id="result-container" class="hidden">
             <div class="result-header">
                 <h2 id="result-title"></h2>
-                <button id="download-btn" class="download-btn">💾 Save .md</button>
+                <div class="save-dropdown">
+                    <button id="save-btn" class="download-btn">💾 Save ▾</button>
+                    <div class="save-menu" id="save-menu">
+                        <button id="download-md-btn" class="save-option">Markdown (.md)</button>
+                        <button id="download-pdf-btn" class="save-option">PDF (.pdf)</button>
+                    </div>
+                </div>
             </div>
             <div class="viewer-toolbar">
                 <label>Font:
@@ -85,7 +91,6 @@
         const resultContainer = document.getElementById('result-container');
         const resultTitle = document.getElementById('result-title');
         const markdownViewer = document.getElementById('markdown-viewer');
-        const downloadBtn = document.getElementById('download-btn');
         const errorContainer = document.getElementById('error-container');
         const errorText = document.getElementById('error-text');
 
@@ -221,27 +226,62 @@
             }
         });
 
-        downloadBtn.addEventListener('click', async () => {
+        // Save dropdown
+        const saveBtn = document.getElementById('save-btn');
+        const saveMenu = document.getElementById('save-menu');
+        const downloadMdBtn = document.getElementById('download-md-btn');
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
+
+        saveBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            saveMenu.classList.toggle('show');
+        });
+
+        document.addEventListener('click', () => {
+            saveMenu.classList.remove('show');
+        });
+
+        async function downloadFile(url, defaultFilename) {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Download failed');
+            }
+            const blob = await response.blob();
+            const filename = response.headers.get('Content-Disposition')?.match(/filename="?([^";\n]+)"?/)?.[1] || defaultFilename;
+
+            const a = document.createElement('a');
+            a.href = window.URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(a.href);
+            a.remove();
+        }
+
+        downloadMdBtn.addEventListener('click', async () => {
             if (currentJobId) {
                 try {
-                    const response = await fetch(`/download/${currentJobId}`);
-                    if (!response.ok) {
-                        throw new Error('Download failed');
-                    }
-                    const blob = await response.blob();
-                    const filename = response.headers.get('Content-Disposition')?.match(/filename="?([^";\n]+)"?/)?.[1] || 'transcript.md';
-
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    a.remove();
+                    await downloadFile(`/download/${currentJobId}`, 'transcript.md');
                 } catch (error) {
                     alert('Download failed: ' + error.message);
                 }
+                saveMenu.classList.remove('show');
+            }
+        });
+
+        downloadPdfBtn.addEventListener('click', async () => {
+            if (currentJobId) {
+                try {
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = 'Generating...';
+                    await downloadFile(`/download/${currentJobId}/pdf`, 'transcript.pdf');
+                } catch (error) {
+                    alert('PDF download failed: ' + error.message);
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '💾 Save ▾';
+                }
+                saveMenu.classList.remove('show');
             }
         });
     </script>

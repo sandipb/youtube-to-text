@@ -135,6 +135,8 @@ def status(job_id):
 @app.route("/download/<job_id>")
 def download(job_id):
     """Download the transcript as a markdown file."""
+    from urllib.parse import quote
+
     job = jobs.get(job_id)
     if not job:
         return jsonify({"error": "Job not found"}), 404
@@ -148,11 +150,103 @@ def download(job_id):
     if not safe_filename:
         safe_filename = "transcript.md"
 
+    # URL-encode the filename for the filename* parameter (RFC 5987)
+    encoded_filename = quote(result["filename"], safe='')
+
     return Response(
         result["markdown"],
-        mimetype="text/markdown; charset=utf-8",
+        mimetype="text/markdown",
         headers={
-            "Content-Disposition": f"attachment; filename=\"{safe_filename}\"; filename*=UTF-8''{result['filename']}"
+            "Content-Disposition": f"attachment; filename=\"{safe_filename}\"; filename*=UTF-8''{encoded_filename}"
+        },
+    )
+
+
+@app.route("/download/<job_id>/pdf")
+def download_pdf(job_id):
+    """Download the transcript as a PDF file."""
+    from urllib.parse import quote
+    from weasyprint import HTML, CSS
+    import markdown
+    import io
+
+    job = jobs.get(job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+
+    if job["status"] != "completed":
+        return jsonify({"error": "Job not completed"}), 400
+
+    result = job["result"]
+
+    # Convert markdown to HTML
+    md_content = result["markdown"]
+    html_content = markdown.markdown(md_content, extensions=['tables', 'fenced_code'])
+
+    # Wrap in full HTML document with styling
+    full_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{result["title"]}</title>
+</head>
+<body>
+{html_content}
+</body>
+</html>"""
+
+    # PDF styling
+    css = CSS(string="""
+        @page {{
+            margin: 1in;
+            size: letter;
+        }}
+        body {{
+            font-family: "Times New Roman", Times, serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            color: #333;
+        }}
+        h1 {{
+            font-size: 18pt;
+            margin-bottom: 0.5em;
+        }}
+        h2 {{
+            font-size: 14pt;
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 0.2em;
+        }}
+        img {{
+            max-width: 100%;
+            height: auto;
+        }}
+        ul, ol {{
+            margin-left: 1.5em;
+        }}
+        li {{
+            margin-bottom: 0.3em;
+        }}
+    """)
+
+    # Generate PDF
+    pdf_buffer = io.BytesIO()
+    HTML(string=full_html).write_pdf(pdf_buffer, stylesheets=[css])
+    pdf_buffer.seek(0)
+
+    # Filename handling
+    pdf_filename = result["filename"].replace(".md", ".pdf")
+    safe_filename = pdf_filename.encode("ascii", "ignore").decode()
+    if not safe_filename:
+        safe_filename = "transcript.pdf"
+    encoded_filename = quote(pdf_filename, safe='')
+
+    return Response(
+        pdf_buffer.read(),
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{safe_filename}\"; filename*=UTF-8''{encoded_filename}"
         },
     )
 

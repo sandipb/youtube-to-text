@@ -200,6 +200,57 @@ form::before {
     border-color: #5a9a5a;
 }
 
+.save-dropdown {
+    position: relative;
+}
+
+.save-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 2px;
+    background: #fff;
+    border: 1px solid #7f9db9;
+    border-radius: 3px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    z-index: 100;
+    min-width: 120px;
+}
+
+.save-menu.show {
+    display: block;
+}
+
+.save-option {
+    display: block;
+    width: 100%;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-family: Tahoma, sans-serif;
+    text-align: left;
+    background: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+.save-option:hover {
+    background: #e8f0fc;
+}
+
+.save-option:first-child {
+    border-radius: 2px 2px 0 0;
+}
+
+.save-option:last-child {
+    border-radius: 0 0 2px 2px;
+}
+
+.download-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
 /* Viewer toolbar with font and zoom */
 .viewer-toolbar {
     display: flex;
@@ -541,7 +592,16 @@ footer a {
         white-space: normal;
     }
 
+    .save-dropdown {
+        width: 100%;
+    }
+
     .download-btn {
         width: 100%;
+    }
+
+    .save-menu {
+        left: 0;
+        right: 0;
     }
 }
